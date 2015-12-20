@@ -122,7 +122,7 @@ new的作用是执行构造函数，返回对象实例。先创建一个空对�
         Child.prototype = new F();
         Child.prototype.constructor = Child;
         Child.uber = Parent.prototype;
-　　}
+    }
 
     var Person = function(name, age) {
         this.name = name;
