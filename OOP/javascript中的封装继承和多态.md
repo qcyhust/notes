@@ -117,11 +117,11 @@ new的作用是执行构造函数，返回对象实例。先创建一个空对�
 与直接利用原型继承不用，这种方法利用一个空对象作为中介。
 
     function extend(Child, Parent) {
-　　　　var F = function(){};
-　　　　F.prototype = Parent.prototype;
-　　　　Child.prototype = new F();
-　　　　Child.prototype.constructor = Child;
-　　　　Child.uber = Parent.prototype;
+        var F = function(){};
+        F.prototype = Parent.prototype;
+        Child.prototype = new F();
+        Child.prototype.constructor = Child;
+        Child.uber = Parent.prototype;
 　　}
 
     var Person = function(name, age) {
