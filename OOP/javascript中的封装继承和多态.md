@@ -54,7 +54,7 @@ new的作用是执行构造函数，返回对象实例。先创建一个空对�
         console.log('eat something');
     }
 
-    var wang = new Person('panda wang', 32);
+    var zheng = new Person('panda zheng', 32);
     var li = new Person('jack li', 21);
 
     console.log(wang.isChinese) //true
@@ -63,6 +63,31 @@ new的作用是执行构造函数，返回对象实例。先创建一个空对�
     Person.prototype.isChinese = false;
     console.log(wang.isChinese) //false
     console.log(wang.isChinese) //false
+
+### 过程式设计
+把过程式设计看成是一系列为了实现需求功能的特定步骤的命令，它的数据和行为是分离的。面向对象封装将对象打包，将其各个对象分为两个不同的属性，接口和实现。如上面的对象Person,要获取实例对象名字，面向对象可以这样做：
+
+    var Person = function(name) {
+        this.name = name;
+    }
+    Person.prototype.getName = function() {
+        return this.name;
+    }
+
+    var zheng = new Person('panda zheng');
+
+    zheng.getName();
+而过程式设计会类似这样：
+
+    var zheng = {
+        name: 'panda zhen'
+    };
+
+    function getName() {
+        return person.name;
+    }
+
+    getName(zheng);
 
 # 继承
 
