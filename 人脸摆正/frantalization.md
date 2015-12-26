@@ -13,6 +13,7 @@ Effective Face Frontalization in Unconstrained Images
 
 ## 完整过程
 ![frontalization_process](imgs/frontalization_process.png)
+
 a：输入图片  
 b：面部特征点检测  
 c：点位人脸特征点，渲染成一个3D计算机模型  
@@ -29,15 +30,18 @@ g：输出的正脸摆正结果
 #### 对称处理和能见度估算
 头部的旋转会使得部分面部的可见度比其他地方更小，特别是鼻子和头部的边缘。这时需要做一些处理：
 ![frontalization_occlusion](imgs/frontalization_occlusion.png)
+
 a：输入图片  
 b：在面部特征点闭合的地方会出现类似涂抹的痕迹  
 c：借助闭合检测和脸部对称输出的图片
 
 估算可见度：使用类似于采用多视图三维重建的方法，使用一个与3D相似的模型和平面IR来计算IQ的可见度。
 ![frontalization_model](imgs/frontalization_model.png)
+
 参考坐标IR中的像素点q3和q4都被影射到输入图片的平面IQ上的像素点q，所以它们的可见度会更低。它们对称的点q1和q2用来预测他们在正面视图中应出现的位置。
 
 ![frontalization_visiable](imgs/frontalization_visiable.png)
+
 a：输入图片  
 b：计算覆盖在原始图片上的可见度，热点图表示可见度更少的区域  
 c：对称后的正脸  
