@@ -5,7 +5,7 @@ Effective Face Frontalization in Unconstrained Images
 * Eran Paz
 * Roee Enbar
 
-## Frontalization
+## 人脸摆正
 ![frontalization_asbtract](imgs/frontalization_asbtract.png)  
 "Frontalization"是将正脸和无约束的人脸照片合成的过程。研究发现这个过程可能会大幅提高人脸识别系统的性能。  
 以前frontalization试图为每个输入图片建立一个3D模型，然后发现这种实现会很困难，而且用意引起面部失调。  
@@ -17,7 +17,7 @@ Effective Face Frontalization in Unconstrained Images
 a：输入图片  
 b：面部特征点检测  
 c：点位输入图片的人脸特征点，用相同的特征点定位器标定由3D标准人脸模型生成的标准脸，渲染成一个3D计算机模型  
-d、e：利用待矫正图片的2D坐标与其对应的3D模型坐标，可以得出一个投影矩阵，用于将待矫正图片的像素点反投影到标准坐标系
+d、e：利用待矫正图片的2D坐标与其对应的3D模型坐标，可以得出一个投影矩阵，用于将待矫正图片的像素点反投影到标准坐标系  
 f：正脸覆盖后，计算出面部非正脸部分的可见性，热点图表示非正脸的像素，这些区域的图片借助脸部对称的位置显示  
 g：输出的正脸摆正结果
 
@@ -32,7 +32,7 @@ g：输出的正脸摆正结果
  将像素点反投影到标准坐标系
 
 #### 对称处理和可见度估算
-头部的旋转会使得部分面部的可见度比其他地方更小，特别是鼻子和头部的边缘。这时需要做一些处理：
+头部的旋转会使得部分面部的可见度比其他地方更小，特别是鼻子和头部的边缘。这时需要做一些处理：  
 ![frontalization_occlusion](imgs/frontalization_occlusion.png)
 
 a：输入图片  
