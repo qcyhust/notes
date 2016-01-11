@@ -1,5 +1,6 @@
 Effective Face Frontalization in Unconstrained Images  
 在无约束图片中的有效人脸摆正
+
 * Tal Hassner   
 * Shai Harel   
 * Eran Paz
@@ -64,12 +65,182 @@ c：对称后的正脸
 
 定位出原始图片人脸的八个区域，主要对应嘴、鼻子和眼睛的周围区域，然后训练8个线性的SVM分类器，每一个分类器的训练图片是正视的人脸对应区域，由此得到LBP特征描述子，给定一张待矫正图片，对其进行同样的分块，用训练好的SVM分类器判断每块区域是否是可见部分，若是可见部分，则丢弃对称的人脸部分，若不是，则填充到前面生成的正脸图对应区域。
 
-#### 实际代码运行效果
+#### 实际代码及运行效果
+下载官网（http://www.openu.ac.il/home/hassner/projects/frontalize/）提供的代码后，能自行输入人脸图片测试人脸摆正的效果。
+
+demo.m文件设置参数和图片：
+
+        addpath calib
+
+        % 载入待摆正的测试图
+        I_Q = imread('test.jpg'); 
+
+        % load some data
+        load eyemask eyemask % mask to exclude eyes from symmetry
+        load DataAlign2LFWa REFSZ REFTFORM % similarity transf. from rendered view to LFW-a coordinates
+
+        % Detect facial features with prefered facial feature detector 
+        detector = 'SDM'; % alternatively 'ZhuRamanan', 'dlib'
+        % Note that the results in the paper were produced using SDM. We have found
+        % other detectors to produce inferior frontalization results. 
+        fidu_XY = [];
+        facial_feature_detection;
+        if isempty(fidu_XY)
+            error('Failed to detect facial features / find face in image.');
+        end
+
+        % Estimate projection matrix C_Q
+        [C_Q, ~,~,~] = estimateCamera(Model3D, fidu_XY);
+
+        % Render frontal view
+        [frontal_sym, frontal_raw] = Frontalize(C_Q, I_Q, Model3D.refU, eyemask);
+
+
+        % Apply similarity transform to LFW-a coordinate system, for compatability
+        % with existing methods and results
+        frontal_sym = imtransform(frontal_sym,REFTFORM,'XData',[1 REFSZ(2)], 'YData',[1 REFSZ(1)]);
+        frontal_raw = imtransform(frontal_raw,REFTFORM,'XData',[1 REFSZ(2)], 'YData',[1 REFSZ(1)]);
+            
+
+        % Display results
+        figure; imshow(I_Q); title('Query photo');
+        figure; imshow(I_Q); hold on; plot(fidu_XY(:,1),fidu_XY(:,2),'.'); hold off; title('Query photo with detections overlaid');
+        figure; imshow(frontal_raw); title('Frontalilzed no symmetry');
+        figure; imshow(frontal_sym); title('Frontalilzed with soft symmetry');
+
+
+Frontalize.m文件为核心文件：
+
+        function [frontal_sym, frontal_raw] = Frontalize(C_Q, I_Q, refU, eyemask)                                         
+        % Actual frontalization function. This is part of the distribution for
+        % face image frontalization ("frontalization" software), described in [1].
+        %
+        % If you find this code useful and use it in your own work, please add
+        % reference to [1].
+        %
+        % Please see project page for more details:
+        %   http://www.openu.ac.il/home/hassner/projects/frontalize
+        %
+        % Please see demo.m for example usage.
+        %
+        % Input: 
+        %   C_Q: Estimated camera projection matrix used to produce the query photo. 
+        %       Computed by estimateCamera.m
+        %   I_Q: Query photo
+        %   refU: NxMx3 matrix assigning each pixel in the reference (frontalized
+        %       coordinate system, the 3D coordinates of the surface of the face
+        %       projected onto that pixel. Available from Model3D.refU
+        %   eyemask: NxMx3 matrix with alpha weights for the eyes, in order to
+        %       exclude them from the symmetry.
+        %
+        % Output:
+        %   frontal_sym: Synthesized frontal view using soft symmetry.
+        %   frontal_raw: Synthesized frontal view without (before) soft symmetry.
+        %
+        %  References:
+        %   [1] Tal Hassner, Shai Harel, Eran Paz, Roee Enbar, "Effective Face
+        %   Frontalization in Unconstrained Images," forthcoming. 
+        %   See project page for more details: 
+        %   http://www.openu.ac.il/home/hassner/projects/frontalize
+        %
+        %   Copyright 2014, Tal Hassner
+        %   http://www.openu.ac.il/home/hassner/projects/frontalize
+        %
+        %
+        %   The SOFTWARE ("frontalization" and all included files) is provided "as is", without any
+        %   guarantee made as to its suitability or fitness for any particular use.
+        %   It may contain bugs, so use of this tool is at your own risk.
+        %   We take no responsibility for any damage that may unintentionally be caused
+        %   through its use.
+        %
+        %   ver 1.2, 18-May-2015
+        %
+            ACC_CONST = 800; 
+            I_Q = double(I_Q);
+
+            bgind = sum(abs(refU),3)==0;
+
+            % count the number of times each pixel in the query is accessed
+            threedee = reshape(refU,[],3)';
+            tmp_proj = C_Q * [threedee;ones(1,size(threedee,2))];
+            tmp_proj2 = tmp_proj(1:2,:)./ repmat(tmp_proj(3,:),2,1);
+            
+
+            bad = min(tmp_proj2)<1 | tmp_proj2(2,:)>size(I_Q,1) | tmp_proj2(1,:)>size(I_Q,2) | bgind(:)';
+            tmp_proj2(:,bad) = [];
+
+            ind = sub2ind([size(I_Q,1),size(I_Q,2)], round(tmp_proj2(2,:)),round(tmp_proj2(1,:)));
+
+            synth_frontal_acc = zeros(size(refU,1),size(refU,2));
+            
+            ind_frontal = 1:(size(refU,1)*size(refU,2));
+            ind_frontal(bad) = [];
+                
+            [c,~,ic] = unique(ind);
+            count = hist(ind,c);
+            synth_frontal_acc(ind_frontal) = count(ic);
+
+            synth_frontal_acc(bgind) = 0;
+            synth_frontal_acc = imfilter(synth_frontal_acc,fspecial('gaussian', 16, 30),'same','replicate');
+            
+            % create synthetic view, without symmetry
+            c1 = I_Q(:,:,1); f1 = zeros(size(synth_frontal_acc));
+            c2 = I_Q(:,:,2); f2 = zeros(size(synth_frontal_acc));
+            c3 = I_Q(:,:,3); f3 = zeros(size(synth_frontal_acc));
+            
+            f1(ind_frontal) = interp2(c1, tmp_proj2(1,:), tmp_proj2(2,:), 'cubic'); 
+            f2(ind_frontal) = interp2(c2, tmp_proj2(1,:), tmp_proj2(2,:), 'cubic'); 
+            f3(ind_frontal) = interp2(c3, tmp_proj2(1,:), tmp_proj2(2,:), 'cubic'); 
+            frontal_raw = cat(3,f1,f2,f3);
+            
+            % which side has more occlusions?
+            midcolumn = round(size(refU,2)/2);
+            sumaccs = sum(synth_frontal_acc);
+            sum_left = sum(sumaccs(1:midcolumn));
+            sum_right = sum(sumaccs(midcolumn+1:end));
+            sum_diff = sum_left - sum_right;
+            
+            if abs(sum_diff)>ACC_CONST % one side is occluded
+                if sum_diff > ACC_CONST % left side of face has more occlusions
+                    weights = [zeros(size(refU,1),midcolumn), ones(size(refU,1),midcolumn)];
+                else % right side of face has occlusions
+                    weights = [ones(size(refU,1),midcolumn), zeros(size(refU,1),midcolumn)];
+                end
+                weights = imfilter(weights, fspecial('gaussian', 33, 60.5),'same','replicate');
+               
+                % apply soft symmetry to use whatever parts are visible in ocluded
+                % side
+                synth_frontal_acc = synth_frontal_acc./max(synth_frontal_acc(:));
+                weight_take_from_org = 1./exp(0.5+synth_frontal_acc);%
+                weight_take_from_sym = 1-weight_take_from_org;
+                
+                weight_take_from_org = weight_take_from_org.*fliplr(weights);
+                weight_take_from_sym = weight_take_from_sym.*fliplr(weights);
+                
+                weight_take_from_org = repmat(weight_take_from_org,[1,1,3]);
+                weight_take_from_sym = repmat(weight_take_from_sym,[1,1,3]);
+                weights = repmat(weights,[1,1,3]);
+                
+                denominator = weights + weight_take_from_org + weight_take_from_sym;
+                frontal_sym = (frontal_raw.*weights + frontal_raw.*weight_take_from_org + flipdim(frontal_raw,2).*weight_take_from_sym)./denominator;
+                
+                % Exclude eyes from symmetry        
+                frontal_sym = frontal_sym.*(1-eyemask) + frontal_raw.*eyemask;
+                
+
+            else %% both sides are occluded pretty much to the same extent -- do not use symmetry
+                frontal_sym = uint8(frontal_raw);
+            end
+            frontal_raw = uint8(frontal_raw);
+            frontal_sym = uint8(frontal_sym);
+          
+        end
+
 系统提供的标准3D正脸图：  
 
 ![frontalization_3D](imgs/frontalization_3D.png)
 
-实际运行效果：  
+输入图片后的实际运行效果：  
 
 ![frontalization_1](imgs/frontalization_1.jpg)
 
